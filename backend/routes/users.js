@@ -46,4 +46,40 @@ router.get('/', async (req, res) => {
   }
 });
 
+// Swagger документация для маршрутов пользователей
+/**
+ * @swagger
+ * /users:
+ *   post:
+ *     summary: Создать нового пользователя
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               name:
+ *                 type: string
+ *               email:
+ *                 type: string
+ *             required:
+ *               - name
+ *               - email
+ *     responses:
+ *       201:
+ *         description: Успешно создан пользователь
+ *       400:
+ *         description: Ошибка валидации или email уже используется
+ *       500:
+ *         description: Ошибка при создании пользователя
+ *   get:
+ *     summary: Получить список пользователей
+ *     responses:
+ *       200:
+ *         description: Успешно получен список пользователей
+ *       500:
+ *         description: Ошибка при получении пользователей
+ */
+
 module.exports = router;
