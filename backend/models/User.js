@@ -1,8 +1,8 @@
-// models/User.js
 const { DataTypes } = require('sequelize');
 const sequelize = require('../config/db'); // Импортируем sequelize
+const bcrypt = require('bcryptjs'); // Импортируем bcryptjs
 
-const User = sequelize.define('User', {
+const User = sequelize.define('User  ', {
   id: {
     type: DataTypes.INTEGER,
     autoIncrement: true,
@@ -11,23 +11,34 @@ const User = sequelize.define('User', {
   },
   name: {
     type: DataTypes.STRING(100), // Ограничение по длине
-    allowNull: false, // Поле может быть пустым
+    allowNull: false, // Поле не может быть пустым
   },
   email: {
     type: DataTypes.STRING(100), // Ограничение по длине
     allowNull: false, // Обязательное поле
-    unique: false, // Уникальное поле
+    unique: true, // Уникальное поле
   },
-  createdat: {
-    type: DataTypes.DATE, // Используем DATEONLY для соответствия типу в SQL
-    defaultValue: DataTypes.NOW, // Дата регистрации по умолчанию
+  password: {
+    type: DataTypes.STRING(100),
+    allowNull: false,
   },
 }, {
   tableName: 'users', // Имя таблицы в базе данных
-  timestamps: false, // Отключаем автоматическое добавление полей createdAt и updatedAt
+  timestamps: true, // Включаем timestamps
+  createdAt: 'createdAt', // Используем только createdAt
+  updatedAt: false, // Отключаем updatedAt
 });
 
-// Синхронизация модели с базой данных
-User .sync();
+// Хэширование пароля перед созданием пользователя
+User .beforeCreate(async (user) => {
+  try {
+    user.password = await bcrypt.hash(user.password, 10);
+  } catch (error) {
+    console.error('Ошибка при хэшировании пароля:', error);
+    throw new Error('Ошибка при создании пользователя');
+  }
+});
+
+// Не вызывайте User.sync(), если используете миграции
 
 module.exports = User;
