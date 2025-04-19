@@ -1,7 +1,6 @@
 const { DataTypes } = require('sequelize');
 const sequelize = require('../config/db'); // Импортируем sequelize
 const bcrypt = require('bcryptjs'); // Импортируем bcryptjs
-const UserAdditionalInfo = require('./UserAdditionalInfo');
 
 const User = sequelize.define('User  ', {
   id: {
@@ -28,14 +27,6 @@ const User = sequelize.define('User  ', {
   timestamps: true, // Включаем timestamps
   createdAt: 'createdAt', // Используем только createdAt
   updatedAt: false, // Отключаем updatedAt
-});
-
-User .hasOne(UserAdditionalInfo, {
-  foreignKey: 'userId',
-  onDelete: 'CASCADE', // Удаляем дополнительные данные при удалении пользователя
-});
-UserAdditionalInfo.belongsTo(User, {
-  foreignKey: 'userId',
 });
 
 // Хэширование пароля перед созданием пользователя

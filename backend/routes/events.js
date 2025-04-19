@@ -3,12 +3,19 @@ const express = require('express');
 const router = express.Router();
 const { Op } = require('sequelize'); // Добавьте этот импорт
 const Event = require('../models/Event.js');
-
+const dotenv = require("dotenv");
+const jwt = require('jsonwebtoken');
+const { deleteEvent, getEventById, createEvent, updateEvent } = require('../routes/functionEv.js');
+dotenv.config();
+const JWT_SECRET = process.env.JWT_SECRET;
 /**
  * @swagger
  * /events/{id}:
  *   get:
  *     summary: Получить одно мероприятие по ID
+ *     tags: [Events]
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: id
@@ -28,23 +35,17 @@ const Event = require('../models/Event.js');
  *       500:
  *         description: Ошибка при получении мероприятия
  */
-router.get('/:id', async (req, res) => {
-  try {
-    const event = await Event.findByPk(req.params.id);
-    if (!event) {
-      return res.status(404).json({ message: 'Мероприятие не найдено' });
-    }
-    res.status(200).json(event);
-  } catch (error) {
-    res.status(500).json({ message: 'Ошибка при получении мероприятия', error: error.message });
-  }
-});
+
+router.get('/:id', getEventById);
 
 /**
  * @swagger
  * /events:
  *   post:
  *     summary: Создать новое мероприятие
+ *     tags: [Events]
+ *     security:
+ *       - bearerAuth: []
  *     requestBody:
  *       required: true
  *       content:
@@ -57,7 +58,7 @@ router.get('/:id', async (req, res) => {
  *               descpription:
  *                 type: string
  *               createdby:
- *                 type: string
+ *                 type: integer
  *             required:
  *               - title
  *               - descpription
@@ -74,27 +75,18 @@ router.get('/:id', async (req, res) => {
  *       500:
  *         description: Ошибка при создании мероприятия
  */
-router.post('/', async (req, res) => {
-  const { title, descpription, createdby } = req.body;
 
-  // Проверка обязательных данных
-  if (!title || !descpription || !createdby) {
-        return res.status(400).json({ message: 'Все поля обязательны' });
-  }
+router.post('/', createEvent);
 
-  try {
-    const newEvent = await Event.create({ title, descpription, createdby });
-    res.status(201).json(newEvent);
-  } catch (error) {
-    res.status(500).json({ message: 'Ошибка при создании мероприятия', error: error.message });
-  }
-});
 
 /**
  * @swagger
  * /events/{id}:
  *   put:
  *     summary: Обновить мероприятие по ID
+ *     tags: [Events]
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: id
@@ -133,32 +125,17 @@ router.post('/', async (req, res) => {
  *       500:
  *         description: Ошибка при обновлении мероприятия
  */
-router.put('/:id', async (req, res) => {
-  const { title, descpription, createdby } = req.body;
+router.put('/:id', updateEvent);
 
-  // Проверка обязательных данных
-  if (!title || !descpription || !createdby) {
-    return res.status(400).json({ message: 'Все поля обязательны' });
-  }
-
-  try {
-    const event = await Event.findByPk(req.params.id);
-    if (!event) {
-      return res.status(404).json({ message: 'Мероприятие не найдено' });
-    }
-
-    await event.update({ title, descpription, createdby });
-    res.status(200).json(event);
-  } catch (error) {
-    res.status(500).json({ message: 'Ошибка при обновлении мероприятия', error: error.message });
-  }
-});
 
 /**
  * @swagger
  * /events/{id}:
  *   delete:
  *     summary: Удалить мероприятие по ID
+ *     tags: [Events]
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: id
@@ -171,22 +148,11 @@ router.put('/:id', async (req, res) => {
  *         description: Успешное удаление мероприятия
  *       404:
  *         description: Мероприятие не найдено
+ *       403:
+ *         description: У вас нет прав для удаления этого мероприятия
  *       500:
  *         description: Ошибка при удалении мероприятия
  */
-router.delete('/:id', async (req, res) => {
-  try {
-    const event = await Event.findByPk(req.params.id);
-    if (!event) {
-      return res.status(404).json({ message: 'Мероприятие не найдено' });
-    }
-
-    await event.destroy();
-    res.status(204).send(); // Успешное удаление, без содержимого
-  } catch (error) {
-    res.status(500).json({ message: 'Ошибка при удалении мероприятия', error: error.message });
-  }
-});
+router.delete('/:id', deleteEvent);
 
 module.exports = router;
-

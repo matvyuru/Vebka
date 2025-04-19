@@ -2,104 +2,85 @@ const express = require("express");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const User = require("../models/User");
-const nodemailer = require("nodemailer");
-const UserAdditionalInfo = require("../models/UserAdditionalInfo"); // Убедитесь, что путь правильный
+const nodemailer = require('nodemailer');
+const UserAdditionalInfo = require('../models/UserAdditionalInfo');
 const dotenv = require("dotenv");
-
+const nodemailerMock = require('nodemailer-mock');
+const { registerUser, loginUser } = require('../routes/functionUs.js');
 dotenv.config();
 const router = express.Router();
-
-const transporter = nodemailer.createTransport({
-    service: 'Yandex', // Или другой почтовый сервис
-    auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS,
-    },
-});
-
-router.post("/register", async (req, res) => {
-    const { email, name, password } = req.body; // Замените name на username
-    if (!email || !name || !password) { 
-        return res.status(400).json({ message: "Заполните все поля" });
-    }
-    try {
-        const existingUser  = await User.findOne({ where: { email } });
-        if (existingUser ) return res.status(400).json({ message: "Email уже используется" });
-        
-        const user = await User.create({ email, name, password }); // Исправьте name на username
-        res.status(201).json({ message: "Регистрация успешна" });
-    } catch (error) {
-        res.status(500).json({ message: "Ошибка сервера" });
-    }
-});
-router.post("/login", async (req, res) => {
-    const { email, password } = req.body;
-    const currentIp = req.headers['x-forwarded-for'] || req.connection.remoteAddress; // Получение IP-адреса
-    const userAgent = req.headers['user-agent'];
-
-    // Проверка наличия email и password
-    if (!email || !password) {
-        return res.status(400).json({ message: "Заполните все поля" });
-    }
-
-    try {
-        // Поиск пользователя по email
-        const user = await User.findOne({ where: { email }, include: UserAdditionalInfo });
-        if (!user) {
-            return res.status(400).json({ message: "Неверные учетные данные" }); // Не раскрываем, существует ли пользователь
-        }
-
-        // Сравнение пароля
-        const isMatch = await bcrypt.compare(password, user.password);
-        if (!isMatch) {
-            return res.status(400).json({ message: "Неверные учетные данные" });
-        }
-
-        // Получение дополнительных данных
-        const additionalInfo = user.UserAdditionalInfo || {};
-        const lastIps = additionalInfo.lastIPs || [];
-        const lastUserAgents = additionalInfo.lastUserAgents || [];
-
-        // Проверка новых IP и User-Agent
-        const isNewIp = !lastIps.includes(currentIp);
-        const isNewUserAgent = !lastUserAgents.includes(userAgent);
-
-        // Отправка уведомления, если IP или User-Agent новые
-        if (isNewIp || isNewUserAgent) {
-            const mailOptions = {
-                from: process.env.EMAIL_USER,
-                to: user.email,
-                subject: 'Уведомление о входе в аккаунт',
-                text: `Вы вошли в свою учетную запись с нового устройства или IP-адреса. Если это не вы, пожалуйста, измените свой пароль.`,
-            };
-
-            await transporter.sendMail(mailOptions);
-        }
-
-        // Обновление последних IP и User-Agent
-        const updatedAdditionalInfo = additionalInfo || await UserAdditionalInfo.create({
-            userId: user.id,
-            lastIPs: [],
-            lastUserAgents: [],
-        });
-
-        updatedAdditionalInfo.lastIPs = [...new Set([...lastIps, currentIp])].slice(-5); // Уникальные последние 5 IP
-        updatedAdditionalInfo.lastUserAgents = [...new Set([...lastUserAgents, userAgent])].slice(-5); // Уникальные последние 5 User-Agent
-        await updatedAdditionalInfo.save();
-
-        // Создание JWT
-        if (!process.env.JWT_SECRET) {
-            console.error("JWT_SECRET не установлен!");
-            return res.status(500).json({ message: "Ошибка сервера: секретный ключ не установлен" });
-        }
-
-        const token = jwt.sign({ id: user.id }, process.env.JWT_SECRET, { expiresIn: "1h" });
-        res.status(200).json({ message: "Успешный вход", token });
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: "Ошибка сервера" });
-    }
-});
+/**
+ * @swagger
+ * /register:
+ *   post:
+ *     summary: Регистрация нового пользователя
+ *     tags: [Users]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 format: email
+ *                 example: "user@example.com"
+ *               name:
+ *                 type: string
+ *                 example: "myusername"
+ *               password:
+ *                 type: string
+ *                 format: password
+ *                 example: "mypassword"
+ *     responses:
+ *       201:
+ *         description: Регистрация успешна
+ *       400:
+ *         description: Заполните все поля или Email уже используется
+ *       500:
+ *         description: Ошибка сервера
+ */
+router.post("/register", registerUser );
+/**
+ * @swagger
+ * /login:
+ *   post:
+ *     summary: Вход пользователя в систему
+ *     tags: [Users]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 format: email
+ *                 example: "user@example.com"
+ *               password:
+ *                 type: string
+ *                 format: password
+ *                 example: "password123"
+ *     responses:
+ *       200:
+ *         description: Успешный вход
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                 token:
+ *                   type: string
+ *       400:
+ *         description: Неверные учетные данные или заполнены не все поля
+ *       500:
+ *         description: Ошибка сервера
+ */
+router.post("/login", loginUser );
 
 
 // Экспортируйте роутер

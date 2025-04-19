@@ -2,8 +2,11 @@
 const express = require('express');
 const router = express.Router();
 const User = require('../models/User.js');
-const { body, validationResult } = require('express-validator'); // Импортируем express-validator
-
+const { body, validationResult } = require('express-validator');
+const dotenv = require("dotenv");
+const jwt = require('jsonwebtoken');
+dotenv.config();
+const JWT_SECRET = process.env.JWT_SECRET;
 // Создание нового пользователя
 router.post(
   '/',
@@ -37,6 +40,20 @@ router.post(
 
 // Получение списка пользователей
 router.get('/', async (req, res) => {
+  // Получаем токен из заголовка авторизации
+  const token = req.headers.authorization?.split(' ')[1];
+  
+  if (!token) {
+    return res.status(401).json({ message: 'Токен не предоставлен' });
+  }
+
+  try {
+    // Декодируем токен для проверки его валидности
+    jwt.verify(token, process.env.JWT_SECRET);
+  } catch (error) {
+    return res.status(401).json({ message: 'Неверный токен' });
+  }
+
   try {
     const users = await User.findAll();
     res.status(200).json(users);
@@ -46,40 +63,45 @@ router.get('/', async (req, res) => {
   }
 });
 
-// Swagger документация для маршрутов пользователей
 /**
  * @swagger
  * /users:
- *   post:
- *     summary: Создать нового пользователя
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               name:
- *                 type: string
- *               email:
- *                 type: string
- *             required:
- *               - name
- *               - email
- *     responses:
- *       201:
- *         description: Успешно создан пользователь
- *       400:
- *         description: Ошибка валидации или email уже используется
- *       500:
- *         description: Ошибка при создании пользователя
  *   get:
- *     summary: Получить список пользователей
+ *     summary: Получение списка пользователей
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
  *     responses:
  *       200:
  *         description: Успешно получен список пользователей
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 type: object
+ *                 properties:
+ *                   id:
+ *                     type: integer
+ *                   email:
+ *                     type: string
+ *                     format: email
+ *                   username:
+ *                     type: string
+ *       401:
+ *         description: Токен не предоставлен или неверный токен
  *       500:
  *         description: Ошибка при получении пользователей
+ */
+
+/**
+ * @swagger
+ * components:
+ *   securitySchemes:
+ *     bearerAuth:
+ *       type: http
+ *       scheme: bearer
+ *       bearerFormat: JWT
  */
 
 module.exports = router;

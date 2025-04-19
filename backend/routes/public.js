@@ -2,12 +2,36 @@ const express = require('express');
 const router = express.Router();
 const { Op } = require('sequelize');
 const Event = require('../models/Event.js');
-
 /**
  * @swagger
- * /events:
+ * components:
+ *   schemas:
+ *     Event:
+ *       type: object
+ *       properties:
+ *         id:
+ *           type: integer
+ *           description: Уникальный идентификатор мероприятия
+ *         title:
+ *           type: string
+ *           description: Название мероприятия
+ *         date:
+ *           type: string
+ *           format: date
+ *           description: Дата проведения мероприятия
+ *         descpription:
+ *           type: string
+ *           description: Описание мероприятия
+ *         createdby:
+ *           type: integer
+ *           description: ID пользователя, создавшего мероприятие
+ */
+/**
+ * @swagger
+ * /eventspublic:
  *   get:
  *     summary: Получить список всех мероприятий
+ *     tags: [Events]
  *     parameters:
  *       - in: query
  *         name: startDate
@@ -32,6 +56,11 @@ const Event = require('../models/Event.js');
  *               type: array
  *               items:
  *                 $ref: '#/components/schemas/Event'
+ *             examples:
+ *               example-1:
+ *                 value: [
+ *                   {"id":2,"title":"Look","date":"2025-03-13","descpription":"\"Ulet\"","createdby":1}
+ *                 ]
  *       500:
  *         description: Ошибка при получении мероприятий
  */

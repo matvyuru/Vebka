@@ -28,15 +28,25 @@ const swaggerOptions = {
     },
     servers: [
       {
-        url: `http://localhost:${PORT}`,
+        url: `http://localhost:${PORT}`, // Используйте обратные кавычки для интерполяции переменной
       },
     ],
+    components: {
+      securitySchemes: {
+        BearerAuth: {
+          type: 'http',
+          scheme: 'bearer',
+          bearerFormat: 'JWT',
+        },
+      },
+    },
   },
   apis: ['./backend/routes/*.js'], // Укажите путь к вашим маршрутам
 };
 
 const swaggerDocs = swaggerJsDoc(swaggerOptions);
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocs));
+
 
 app.use('/eventspublic', publicRoutes);
 app.use('/', authRouter);
@@ -56,4 +66,3 @@ sequelize.sync()
   .catch(err => {
     console.error('Ошибка синхронизации моделей:', err);
   });
-
